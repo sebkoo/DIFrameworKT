@@ -1,3 +1,7 @@
+import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.createInstance
+
 object DIFramework {
     // Part 1 - create two new annotations
 
@@ -61,4 +65,17 @@ object DIFramework {
 
     // Controller (HTTP) - Service - Repository
     //                  \- UserManager
+
+    class DIManager {
+        private val layers= mutableMapOf<KClass<*>, Any>()
+
+        // Part 2 - add a function which registers a class into the layers map
+        fun <T: Any> register(clazz: KClass<T>): Unit {
+            // if clazz has the annotation @Layer, instantiate the class and add the association
+            // clazz -> that instance
+            if (clazz.findAnnotation<Layer>() != null) {
+                val instance = clazz.createInstance()
+                layers[clazz] = instance
+            }
+        }
 }
