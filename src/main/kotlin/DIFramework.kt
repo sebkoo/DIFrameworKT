@@ -1,6 +1,8 @@
 import kotlin.reflect.KClass
+import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.createInstance
+import kotlin.reflect.full.declaredMemberProperties
 
 object DIFramework {
     // Part 1 - create two new annotations
@@ -67,10 +69,10 @@ object DIFramework {
     //                  \- UserManager
 
     class DIManager {
-        private val layers= mutableMapOf<KClass<*>, Any>()
+        private val layers = mutableMapOf<KClass<*>, Any>()
 
         // Part 2 - add a function which registers a class into the layers map
-        fun <T: Any> register(clazz: KClass<T>): Unit {
+        fun <T : Any> register(clazz: KClass<T>): Unit {
             // if clazz has the annotation @Layer, instantiate the class and add the association
             // clazz -> that instance
             if (clazz.findAnnotation<Layer>() != null) {
@@ -78,4 +80,24 @@ object DIFramework {
                 layers[clazz] = instance
             }
         }
+
+        // Part 3 - a function which injects all the dependencies for a particular type
+        fun <T: Any> injectDependencies(instance: T) {
+            // for the class of T, find all properties annotated with @Inject
+            val clazz= instance::class
+            clazz.declaredMemberProperties.forEach { prop->
+                if (prop.findAnnotation<Inject>() != null) {
+                    // figure out their types
+                    val type= prop.returnType.classifier as KClass<*>
+                    // for every property, find the instance in the layers map associated to their type
+                    val dependency= layers[type]
+                    if (dependency != null && prop is KMutableProperty<*>) {
+                        // set that property to that instance
+                        prop.setter.call(instance, dependency)  // inject
+                    }
+
+                }
+            }
+        }
+    }
 }
